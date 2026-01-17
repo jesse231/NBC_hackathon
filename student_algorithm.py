@@ -67,6 +67,11 @@ class TradingBot:
         self.step_latencies = []            # Time between DONE and next market data
         self.order_send_times = {}          # order_id -> time sent
         self.fill_latencies = []            # Time between order and fill
+
+        # Our stategy requires certain variables to be maintained
+        self.return_t = 0.0
+        self.return_average = 0.0
+        self.volatility_t = 0.0
     
     # =========================================================================
     # REGISTRATION - Get a token to start trading
