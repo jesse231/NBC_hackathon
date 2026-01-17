@@ -1,3 +1,4 @@
+
 # Trading Algorithm Template
 
 A Python template for building trading algorithms that connect to the exchange simulator.
