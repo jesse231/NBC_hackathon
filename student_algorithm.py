@@ -222,8 +222,19 @@ class TradingBot:
     # YOUR STRATEGY - MODIFY THIS METHOD!
     # =========================================================================
 
-    def gamma_func(self, inventory, volatility_t):
-        return 0.01
+    def get_risk_aversion(inventory, volatility):
+        # 1. Base Parameters
+        base_gamma = 0.1
+        vol_sensitivity = 10.0
+        inv_sensitivity = 5.0
+        
+        v_factor = (volatility / 6.0) ** 2
+        
+        i_factor = (abs(inventory) / 5000.0) ** 2
+        
+        gamma = base_gamma + (vol_sensitivity * v_factor) + (inv_sensitivity * i_factor)
+        
+        return gamma
     
     def get_order_size(inventory, volatility):
         # in Percentage
