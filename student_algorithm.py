@@ -221,7 +221,7 @@ class TradingBot:
     # YOUR STRATEGY - MODIFY THIS METHOD!
     # =========================================================================
 
-    def get_risk_aversion(inventory, volatility):
+    def get_risk_aversion(self, inventory, volatility):
         norm_inventory = abs(inventory) / 5000.0
         norm_volatility = volatility / 6.0
 
@@ -234,7 +234,7 @@ class TradingBot:
 
         return gamma * scale_factor
     
-    def get_order_size(inventory, volatility):
+    def get_order_size(self, inventory, volatility):
         # in Percentage
         aggression = 0.2
 
@@ -292,11 +292,11 @@ class TradingBot:
                 return {"side": "BUY", "price": round(bid_price, 2), "qty": amount}
         elif amount < 0 and amount > -4500:
             if ask_price < ask:
-                return {"side": "SELL", "price": round(ask_price, 2), "qty": amount}
+                return {"side": "SELL", "price": round(ask_price, 2), "qty": abs(amount)}
         elif amount > 0:
             return {"side": "BUY", "price": round(bid, 2) + 0.01, "qty": amount}
         elif amount < 0:
-            return {"side": "SELL", "price": round(ask, 2) - 0.01, "qty": amount}
+            return {"side": "SELL", "price": round(ask, 2) - 0.01, "qty": abs(amount)}
         
         else:
             return None
