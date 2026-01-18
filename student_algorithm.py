@@ -75,6 +75,7 @@ class TradingBot:
         self.lambda_ = 0.01
         self.K_ = 1.5
         self.volatility_t = 0.0
+        self.previous_mid = 0.0
     
     # =========================================================================
     # REGISTRATION - Get a token to start trading
@@ -268,23 +269,17 @@ class TradingBot:
         # Skip if no valid prices
         if mid <= 0 or bid <= 0 or ask <= 0:
             return None
-        
-        # =================================================================
-        # EXAMPLE STRATEGY: Conservative trading
-        # 
-        # - Cross the spread aggressively to get fills
-        # - Manage inventory by alternating buy/sell
-        # =================================================================
-        
+
         # Only trade every 50 steps to avoid hitting order limits
         if self.current_step % 50 != 0:
             return None
         
         self.volatility_t = self.alpha_ * (mid - self.previous_mid) ** 2 + (1 - self.alpha_) * self.volatility_t ** 2
+        self.previous_mid = mid
         
         reservation_price = mid - (self.inventory * self.lambda_ * self.volatility_t)
 
-        gamma = self.gamma_func(self.inventory, self.volatility_t)
+        gamma = self.get_risk_aversion(self.inventory, self.volatility_t)
         spread = gamma * self.volatility_t ** 2 + (2 / gamma) * np.log(1 + (gamma / self.K_))
         
         bid_price = reservation_price - spread / 2
@@ -295,13 +290,16 @@ class TradingBot:
         if amount >= 0 and amount < 4500:
             if bid_price > bid:
                 return {"side": "BUY", "price": round(bid_price, 2), "qty": amount}
-        elif amount < 0 and amount < -4500:
+        elif amount < 0 and amount > -4500:
             if ask_price < ask:
                 return {"side": "SELL", "price": round(ask_price, 2), "qty": amount}
         elif amount > 0:
             return {"side": "BUY", "price": round(bid, 2) + 0.01, "qty": amount}
         elif amount < 0:
             return {"side": "SELL", "price": round(ask, 2) - 0.01, "qty": amount}
+        
+        else:
+            return None
     
     # =========================================================================
     # ORDER HANDLING
