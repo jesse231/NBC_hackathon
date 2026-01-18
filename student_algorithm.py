@@ -225,6 +225,16 @@ class TradingBot:
     def gamma_func(self, inventory, volatility_t):
         return 0.01
     
+    def get_order_size(inventory, volatility):
+        # in Percentage
+        aggression = 0.2
+
+        # Take into account volatility
+        target = 5000 * (1 - (volatility / 6))
+        
+        desired = target - inventory
+        
+        return int(round((desired * aggression) / 100) * 100)
     def decide_order(self, bid: float, ask: float, mid: float) -> Optional[Dict]:
         """
         ╔══════════════════════════════════════════════════════════════════╗
