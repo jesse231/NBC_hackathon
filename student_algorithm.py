@@ -71,11 +71,9 @@ class TradingBot:
         self.fill_latencies = []            # Time between order and fill
 
         # Our stategy requires certain variables to be maintained
-        self.mids = deque(maxlen=50)
         self.alpha_ = 0.04
         self.lambda_ = 0.01
         self.K_ = 1.5
-        self.volatilities = deque(maxlen=50)
         self.volatility_t = 0.0
     
     # =========================================================================
@@ -245,6 +243,7 @@ class TradingBot:
         desired = target - inventory
         
         return int(round((desired * aggression) / 100) * 100)
+    
     def decide_order(self, bid: float, ask: float, mid: float) -> Optional[Dict]:
         """
         ╔══════════════════════════════════════════════════════════════════╗
@@ -281,7 +280,7 @@ class TradingBot:
         if self.current_step % 50 != 0:
             return None
         
-        self.volatility_t = self.alpha_ * (mid - self.mids[-1]) ** 2 + (1 - self.alpha_) * self.volatility_t ** 2
+        self.volatility_t = self.alpha_ * (mid - self.previous_mid) ** 2 + (1 - self.alpha_) * self.volatility_t ** 2
         
         reservation_price = mid - (self.inventory * self.lambda_ * self.volatility_t)
 
@@ -291,31 +290,18 @@ class TradingBot:
         bid_price = reservation_price - spread / 2
         ask_price = reservation_price + spread / 2
 
-        self.mids.append(mid)
-        self.volatilities.append(self.volatility_t)
-        
-        # If we're too long, sell aggressively (hit the bid)
-        if self.inventory > 4000:
-            return {"side": "SELL", "price": round(bid, 2) - 0.01, "qty": 100}
-        
-        # If we're too short, buy aggressively (lift the offer)
-        elif self.inventory < -4000:
-            return {"side": "BUY", "price": round(ask, 2) + 0.01, "qty": 100}
-        
-        # If we have a small enough inventory, we can trade stock
-        elif self.inventory > 2000 and bid_price < bid:
-            return {"side": "BUY", "price": round(bid_price, 2) - , "qty": 100}
-        elif self.inventory < -2000 and ask_price > ask:
-            return {"side": "SELL", "price": round(ask_price, 2), "qty": 100}
+        amount = self.get_order_size(self.inventory, self.volatility_t)
 
-        
-        # Otherwise, alternate buy/sell to demonstrate trading
-        elif (self.current_step // 50) % 2 == 0:
-            # Buy aggressively (cross the spread)
-            return {"side": "BUY", "price": round(ask, 2), "qty": 100}
-        else:
-            # Sell aggressively (cross the spread)
-            return {"side": "SELL", "price": round(bid, 2), "qty": 100}
+        if amount >= 0 and amount < 4500:
+            if bid_price > bid:
+                return {"side": "BUY", "price": round(bid_price, 2), "qty": amount}
+        elif amount < 0 and amount < -4500:
+            if ask_price < ask:
+                return {"side": "SELL", "price": round(ask_price, 2), "qty": amount}
+        elif amount > 0:
+            return {"side": "BUY", "price": round(bid, 2) + 0.01, "qty": amount}
+        elif amount < 0:
+            return {"side": "SELL", "price": round(ask, 2) - 0.01, "qty": amount}
     
     # =========================================================================
     # ORDER HANDLING
