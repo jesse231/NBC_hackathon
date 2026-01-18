@@ -223,18 +223,17 @@ class TradingBot:
     # =========================================================================
 
     def get_risk_aversion(inventory, volatility):
-        # 1. Base Parameters
-        base_gamma = 0.1
-        vol_sensitivity = 10.0
-        inv_sensitivity = 5.0
-        
-        v_factor = (volatility / 6.0) ** 2
-        
-        i_factor = (abs(inventory) / 5000.0) ** 2
-        
-        gamma = base_gamma + (vol_sensitivity * v_factor) + (inv_sensitivity * i_factor)
-        
-        return gamma
+        norm_inventory = abs(inventory) / 5000.0
+        norm_volatility = volatility / 6.0
+
+        w_inv = 0.6
+        w_vol = 0.4
+
+        gamma = (w_inv * (norm_inventory ** 2)) + (w_vol * (norm_volatility ** 2))
+
+        scale_factor = 1.0 
+
+        return gamma * scale_factor
     
     def get_order_size(inventory, volatility):
         # in Percentage
