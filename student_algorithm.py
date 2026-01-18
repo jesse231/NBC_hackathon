@@ -17,7 +17,9 @@ import time
 import requests
 import ssl
 import urllib3
+import numpy as np
 from typing import Dict, Optional
+from collections import deque
 
 # Suppress SSL warnings for self-signed certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -69,8 +71,11 @@ class TradingBot:
         self.fill_latencies = []            # Time between order and fill
 
         # Our stategy requires certain variables to be maintained
-        self.return_t = 0.0
-        self.return_average = 0.0
+        self.mids = deque(maxlen=50)
+        self.alpha_ = 0.04
+        self.lambda_ = 0.01
+        self.K_ = 1.5
+        self.volatilities = deque(maxlen=50)
         self.volatility_t = 0.0
     
     # =========================================================================
@@ -216,6 +221,9 @@ class TradingBot:
     # =========================================================================
     # YOUR STRATEGY - MODIFY THIS METHOD!
     # =========================================================================
+
+    def gamma_func(self, inventory, volatility_t):
+        return 0.01
     
     def decide_order(self, bid: float, ask: float, mid: float) -> Optional[Dict]:
         """
@@ -253,13 +261,33 @@ class TradingBot:
         if self.current_step % 50 != 0:
             return None
         
+        self.volatility_t = self.alpha_ * (mid - self.mids[-1]) ** 2 + (1 - self.alpha_) * self.volatility_t ** 2
+        
+        reservation_price = mid - (self.inventory * self.lambda_ * self.volatility_t)
+
+        gamma = self.gamma_func(self.inventory, self.volatility_t)
+        spread = gamma * self.volatility_t ** 2 + (2 / gamma) * np.log(1 + (gamma / self.K_))
+        
+        bid_price = reservation_price - spread / 2
+        ask_price = reservation_price + spread / 2
+
+        self.mids.append(mid)
+        self.volatilities.append(self.volatility_t)
+        
         # If we're too long, sell aggressively (hit the bid)
-        if self.inventory > 200:
-            return {"side": "SELL", "price": round(bid, 2), "qty": 100}
+        if self.inventory > 4000:
+            return {"side": "SELL", "price": round(bid, 2) - 0.01, "qty": 100}
         
         # If we're too short, buy aggressively (lift the offer)
-        elif self.inventory < -200:
-            return {"side": "BUY", "price": round(ask, 2), "qty": 100}
+        elif self.inventory < -4000:
+            return {"side": "BUY", "price": round(ask, 2) + 0.01, "qty": 100}
+        
+        # If we have a small enough inventory, we can trade stock
+        elif self.inventory > 2000 and bid_price < bid:
+            return {"side": "BUY", "price": round(bid_price, 2) - , "qty": 100}
+        elif self.inventory < -2000 and ask_price > ask:
+            return {"side": "SELL", "price": round(ask_price, 2), "qty": 100}
+
         
         # Otherwise, alternate buy/sell to demonstrate trading
         elif (self.current_step // 50) % 2 == 0:
